@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<!-- Single-file frontend (HTML + CSS + JS). Served by Flask at http://localhost:5000,
+     or open it with VS Code Live Server while the backend (python app.py) is running. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hookline · YouTube SEO assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f5f4f9; --card: #fff; --ink: #1d1a2f; --muted: #615e76; --line: #e2e0ec;
+      --accent: #d7263d; --accent-dark: #b01c30; --accent-soft: #fde8eb;
+      --ok: #1c7144; --ok-bg: #e3f4ea; --warn: #8f5600; --warn-bg: #fff1d6;
+      --head: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+      --body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15.5px/1.6 var(--body); }
+    h1, h2, h3, p { margin: 0; }
+    h1, h2, .brand { font-family: var(--head); letter-spacing: -0.015em; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    :focus-visible { outline: 3px solid #f08a97; outline-offset: 2px; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem clamp(1rem, 4vw, 2.5rem); border-bottom: 1px solid var(--line); background: var(--card); }
+    .brand { display: flex; align-items: center; gap: .6rem; font-size: 1.4rem; font-weight: 700; }
+    .brand-mark { width: 2rem; height: 1.4rem; background: var(--accent); border-radius: 6px; position: relative; }
+    .brand-mark::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-35%, -50%); border-left: .5rem solid #fff; border-top: .32rem solid transparent; border-bottom: .32rem solid transparent; }
+    .note { color: var(--muted); font-size: .9rem; }
+
+    .layout { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 1.5rem; padding: 1.75rem clamp(1rem, 4vw, 2.5rem) 3rem; max-width: 1320px; margin: 0 auto; align-items: start; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.4rem; }
+    .input-panel { position: sticky; top: 1rem; }
+    h2 { font-size: 1.25rem; margin-bottom: .25rem; }
+    .sub { color: var(--muted); margin-bottom: 1.1rem; }
+
+    .segmented { display: grid; grid-template-columns: 1fr 1fr; padding: .25rem; background: #eeedf5; border-radius: 10px; margin-bottom: 1rem; }
+    .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+    .segmented label { text-align: center; padding: .5rem; border-radius: 8px; font-weight: 500; cursor: pointer; color: var(--muted); }
+    .segmented input:checked + label { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(29, 26, 47, .15); }
+    .segmented input:focus-visible + label { outline: 3px solid #f08a97; }
+    .field-label { display: block; font-weight: 500; margin-bottom: .4rem; }
+    textarea, select { width: 100%; padding: .7rem .85rem; border: 1px solid #cdcade; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
+    textarea { resize: vertical; min-height: 9rem; }
+    textarea.invalid { border-color: var(--accent); background: #fffafa; }
+    .meta { display: flex; justify-content: space-between; gap: 1rem; min-height: 1.5rem; margin: .3rem 0 .9rem; font-size: .85rem; }
+    .error-text { color: var(--accent-dark); font-weight: 500; }
+    .counter { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .row { margin-bottom: 1.1rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .65rem 1.15rem; border: 1px solid transparent; border-radius: 9px; font: 500 .95rem var(--body); cursor: pointer; transition: background .15s; }
+    .btn:disabled { opacity: .65; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+    .btn-ghost:hover { background: #f0eff6; }
+    .btn-sm { padding: .3rem .7rem; font-size: .85rem; }
+    .spinner { width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .results-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+    .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin-bottom: 1.1rem; overflow-x: auto; }
+    .tab { padding: .6rem .95rem; border: 0; border-bottom: 3px solid transparent; background: none; font: 500 .95rem var(--body); color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--ink); }
+
+    .empty { padding: 1.5rem; border: 1px dashed #cdcade; border-radius: 12px; color: var(--muted); display: grid; gap: .35rem; justify-items: start; }
+    .empty strong { color: var(--ink); }
+    .loading { display: flex; align-items: center; gap: .8rem; color: var(--muted); padding: 1rem 0; }
+    .loading .spinner { width: 1.4rem; height: 1.4rem; border-color: #f5c3ca; border-top-color: var(--accent); }
+    .banner { padding: .8rem 1rem; border-radius: 9px; background: var(--accent-soft); color: var(--accent-dark); border: 1px solid #f4c0c7; font-weight: 500; }
+
+    .item { display: flex; justify-content: space-between; gap: 1rem; padding: .95rem 0; border-bottom: 1px solid var(--line); }
+    .item:last-child { border-bottom: 0; }
+    .item-main { min-width: 0; }
+    .item-title { font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
+    .item-meta { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .35rem; font-size: .82rem; }
+    .pill { padding: .05rem .6rem; border-radius: 999px; background: #eeedf5; color: #46435e; }
+    .pill-ok { background: var(--ok-bg); color: var(--ok); }
+    .pill-warn { background: var(--warn-bg); color: var(--warn); }
+
+    .text-block { white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem 1.1rem; background: #faf9fd; border: 1px solid var(--line); border-radius: 10px; }
+    .block-foot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: .75rem; color: var(--muted); font-size: .85rem; }
+    .section { margin-bottom: 1.5rem; }
+    .section:last-child { margin-bottom: 0; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .6rem; }
+    .section-head h3 { font-size: 1rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .chip { padding: .25rem .75rem; border-radius: 999px; background: #eeedf5; font-size: .9rem; overflow-wrap: anywhere; }
+    .chip-hash { background: var(--accent-soft); color: var(--accent-dark); }
+
+    .short { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem; margin-bottom: 1rem; }
+    .short:last-child { margin-bottom: 0; }
+    .short-hook { font-family: var(--head); font-size: 1.15rem; font-weight: 600; line-height: 1.35; margin: .15rem 0 .8rem; }
+    .short-label { font-size: .82rem; color: var(--muted); font-weight: 500; }
+    .short-script { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: .8rem; }
+    .short-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+    .caption { font-size: .88rem; }
+
+    #toasts { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 20; display: grid; gap: .5rem; }
+    .toast { padding: .65rem 1rem; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 500; animation: pop .2s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px); } }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+      .input-panel { position: static; }
+    }
+    @media (max-width: 520px) {
+      .item { flex-direction: column; }
+      .results-head { flex-direction: column; }
+      .note { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Hookline</div>
+  <p class="note">YouTube SEO assistant. Everything here is a draft for you to edit.</p>
+</header>
+
+<div class="layout">
+  <form id="form" class="panel input-panel" novalidate>
+    <h2>What's the video about?</h2>
+    <p class="sub">Add a topic or paste your script. You'll get titles, a description, keywords, tags, and Shorts ideas.</p>
+
+    <div class="segmented" role="radiogroup" aria-label="Input type">
+      <input type="radio" name="mode" id="mode-topic" value="topic" checked>
+      <label for="mode-topic">Topic</label>
+      <input type="radio" name="mode" id="mode-script" value="script">
+      <label for="mode-script">Script</label>
+    </div>
+
+    <label class="field-label" for="input" id="input-label">Video topic</label>
+    <textarea id="input" rows="7" aria-describedby="error counter"></textarea>
+    <div class="meta">
+      <p id="error" class="error-text" role="alert"></p>
+      <span id="counter" class="counter"></span>
+    </div>
+
+    <div class="row">
+      <label class="field-label" for="tone">Tone</label>
+      <select id="tone">
+        <option>Friendly</option><option>Energetic</option><option>Professional</option><option>Educational</option><option>Humorous</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submit" class="btn btn-primary"><span class="spinner" id="spin" aria-hidden="true" hidden></span><span id="submit-label">Generate publishing kit</span></button>
+      <button type="button" id="clear" class="btn btn-ghost">Clear form</button>
+    </div>
+  </form>
+
+  <section class="panel" aria-live="polite" aria-labelledby="results-title">
+    <div class="results-head">
+      <div>
+        <h2 id="results-title">Publishing kit</h2>
+        <p class="sub" id="results-sub">Your titles, description, tags, and Shorts will show up here.</p>
+      </div>
+      <button type="button" id="copy-all" class="btn btn-ghost btn-sm" hidden>Copy everything</button>
+    </div>
+    <div id="results"></div>
+  </section>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // Flask backend. Opened with Live Server (or file://), this page calls the API on port 5000.
+  // Change BACKEND_URL if you run Flask on another port.
+  const BACKEND_URL = "http://localhost:5000";
+  const API_BASE = ["localhost", "127.0.0.1", ""].includes(location.hostname) && location.port !== "5000" ? BACKEND_URL : "";
+
+  const LIMITS = { topic: { min: 3, max: 500 }, script: { min: 40, max: 12000 } };
+  const COPY = {
+    topic: { label: "Video topic", placeholder: "For example: Beginner's guide to Minecraft redstone", noun: "video topic" },
+    script: { label: "Video script", placeholder: "Paste your full script here", noun: "script" },
+  };
+  const TAB_ORDER = [["titles", "Titles"], ["description", "Description"], ["keywords", "Keywords and tags"], ["shorts", "Shorts"]];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  /** Build DOM without innerHTML so AI output is never parsed as markup. */
+  function h(tag, props = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (value == null || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of children.flat()) {
+      if (child == null || child === false) continue;
+      node.append(child.nodeType ? child : document.createTextNode(String(child)));
+    }
+    return node;
+  }
+
+  const els = {
+    form: $("#form"), input: $("#input"), label: $("#input-label"), error: $("#error"), counter: $("#counter"),
+    tone: $("#tone"), submit: $("#submit"), spin: $("#spin"), submitLabel: $("#submit-label"),
+    results: $("#results"), sub: $("#results-sub"), copyAll: $("#copy-all"),
+  };
+  let current = null;
+  let activeTab = "titles";
+
+  async function api(path, options = {}) {
+    let res;
+    try {
+      res = await fetch(API_BASE + path, { headers: { "Content-Type": "application/json" }, ...options });
+    } catch {
+      throw new Error(`Can't reach the backend at ${API_BASE || "this server"}. Start it with "python app.py", then reload this page.`);
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* not JSON */ }
+    if (!res.ok) throw new Error((data && data.error) || `The request failed (HTTP ${res.status}).`);
+    return data;
+  }
+
+  function toast(message) {
+    const node = h("div", { class: "toast", role: "status" }, message);
+    $("#toasts").append(node);
+    setTimeout(() => node.remove(), 2800);
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const area = h("textarea", { "aria-hidden": "true", readonly: true });
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.append(area);
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      area.remove();
+      return ok;
+    }
+  }
+
+  function copyButton(text, label = "Copy") {
+    const btn = h("button", { type: "button", class: "btn btn-ghost btn-sm" }, label);
+    btn.addEventListener("click", async () => {
+      const ok = await copyText(typeof text === "function" ? text() : text);
+      btn.textContent = ok ? "Copied" : "Copy failed";
+      toast(ok ? "Copied to clipboard" : "Couldn't copy. Select the text and copy it manually.");
+      setTimeout(() => (btn.textContent = label), 1600);
+    });
+    return btn;
+  }
+
+  const emptyState = (title, text) => h("div", { class: "empty" }, h("strong", {}, title), h("span", {}, text));
+
+  /* ------------------------------------------------------------------ form */
+
+  const mode = () => $('input[name="mode"]:checked').value;
+
+  function applyMode() {
+    const m = mode();
+    els.label.textContent = COPY[m].label;
+    els.input.placeholder = COPY[m].placeholder;
+    els.input.rows = m === "script" ? 12 : 6;
+    els.input.maxLength = LIMITS[m].max;
+    updateCounter();
+    setError("");
+  }
+
+  function updateCounter() {
+    els.counter.textContent = `${els.input.value.length} / ${LIMITS[mode()].max}`;
+  }
+
+  function setError(message) {
+    els.error.textContent = message || "";
+    els.input.classList.toggle("invalid", Boolean(message));
+    if (message) els.input.setAttribute("aria-invalid", "true");
+    else els.input.removeAttribute("aria-invalid");
+  }
+
+  function validate(text) {
+    const m = mode(), { min, max } = LIMITS[m], noun = COPY[m].noun;
+    if (!text) return `Enter a ${noun} before generating.`;
+    if (text.length < min) return `The ${noun} is too short. Enter at least ${min} characters.`;
+    if (text.length > max) return `The ${noun} is too long. Shorten it to ${max} characters or fewer.`;
+    return "";
+  }
+
+  function setLoading(on) {
+    els.submit.disabled = on;
+    els.spin.hidden = !on;
+    els.submitLabel.textContent = on ? "Generating…" : "Generate publishing kit";
+    els.input.readOnly = on;
+    if (on) {
+      els.copyAll.hidden = true;
+      els.results.replaceChildren(h("div", { class: "loading" }, h("span", { class: "spinner", "aria-hidden": "true" }),
+        "Writing your titles, description, tags, and Shorts. This can take 10 to 30 seconds."));
+    }
+  }
+
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", applyMode));
+  els.input.addEventListener("input", () => { updateCounter(); setError(""); });
+
+  els.form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = els.input.value.trim();
+    const problem = validate(text);
+    if (problem) { setError(problem); els.input.focus(); return; }
+    setError("");
+    setLoading(true);
+    try {
+      const result = await api("/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ input: text, mode: mode(), tone: els.tone.value }),
+      });
+      renderResults(result);
+      toast("Publishing kit ready");
+    } catch (err) {
+      current = null;
+      els.sub.textContent = "Something went wrong.";
+      els.results.replaceChildren(h("div", { class: "banner", role: "alert" }, err.message),
+        h("p", { class: "note", style: "margin-top:.75rem" }, "Your input is still in the form. Generate again when you're ready."));
+    } finally {
+      els.submit.disabled = false;
+      els.spin.hidden = true;
+      els.submitLabel.textContent = "Generate publishing kit";
+      els.input.readOnly = false;
+    }
+  });
+
+  $("#clear").addEventListener("click", () => {
+    els.input.value = "";
+    updateCounter();
+    setError("");
+    current = null;
+    renderEmpty();
+    els.input.focus();
+  });
+
+  /* --------------------------------------------------------------- results */
+
+  function renderEmpty() {
+    els.copyAll.hidden = true;
+    els.sub.textContent = "Your titles, description, tags, and Shorts will show up here.";
+    els.results.replaceChildren(emptyState("Nothing generated yet",
+      "Add a video topic or script on the left, then choose Generate publishing kit."));
+  }
+
+  function titlesPanel(r) {
+    return h("div", {}, r.titles.map((t) => {
+      const n = t.title.length;
+      return h("div", { class: "item" },
+        h("div", { class: "item-main" },
+          h("div", { class: "item-title" }, t.title),
+          h("div", { class: "item-meta" },
+            t.angle && h("span", { class: "pill" }, t.angle),
+            h("span", { class: n <= 60 ? "pill pill-ok" : "pill pill-warn" },
+              n <= 60 ? `${n} characters` : `${n} characters, may be cut off in search`))),
+        copyButton(t.title));
+    }));
+  }
+
+  function descriptionPanel(r) {
+    return h("div", {},
+      h("div", { class: "text-block" }, r.description),
+      h("div", { class: "block-foot" }, h("span", {}, `${r.description.length} characters. Viewers see the opening lines first.`), copyButton(r.description, "Copy description")));
+  }
+
+  function chipSection(title, items, copyValue, extra, chipClass = "chip") {
+    return h("div", { class: "section" },
+      h("div", { class: "section-head" }, h("h3", {}, title), copyButton(copyValue, "Copy")),
+      h("div", { class: "chips" }, items.map((i) => h("span", { class: chipClass }, i))),
+      extra);
+  }
+
+  function keywordsPanel(r) {
+    const parts = [
+      chipSection("Keywords", r.keywords, r.keywords.join("\n")),
+      chipSection(`Tags (${r.tag_characters} of 500 characters)`, r.tags, r.tags.join(", ")),
+    ];
+    if (r.hashtags.length) parts.push(chipSection("Hashtags", r.hashtags, r.hashtags.join(" "), null, "chip chip-hash"));
+    return h("div", {}, parts);
+  }
+
+  function shortsPanel(r) {
+    return h("div", {}, r.shorts.map((s, i) =>
+      h("article", { class: "short" },
+        h("span", { class: "short-label" }, `Short ${i + 1}: opening hook`),
+        h("p", { class: "short-hook" }, s.hook),
+        h("span", { class: "short-label" }, "Script"),
+        h("p", { class: "short-script" }, s.script),
+        h("div", { class: "short-foot" },
+          s.on_screen_text ? h("span", { class: "caption" }, h("span", { class: "short-label" }, "On-screen text: "), s.on_screen_text) : h("span"),
+          copyButton(`${s.hook}\n\n${s.script}${s.on_screen_text ? `\n\nOn-screen text: ${s.on_screen_text}` : ""}`, "Copy script")))));
+  }
+
+  function bundle(r) {
+    const lines = ["TITLES", ...r.titles.map((t, i) => `${i + 1}. ${t.title}`), "", "DESCRIPTION", r.description, "",
+      "KEYWORDS", ...r.keywords, "", "TAGS", r.tags.join(", ")];
+    if (r.hashtags.length) lines.push("", "HASHTAGS", r.hashtags.join(" "));
+    r.shorts.forEach((s, i) => lines.push("", `SHORT ${i + 1}`, `Hook: ${s.hook}`, s.script, s.on_screen_text ? `On-screen text: ${s.on_screen_text}` : ""));
+    return lines.join("\n").trim();
+  }
+
+  function renderResults(r) {
+    current = r;
+    els.sub.textContent = "Review and edit everything before you publish.";
+    els.copyAll.hidden = false;
+    const builders = { titles: titlesPanel, description: descriptionPanel, keywords: keywordsPanel, shorts: shortsPanel };
+    const tabs = h("div", { class: "tabs", role: "tablist", "aria-label": "Publishing kit sections" });
+    const panels = {};
+
+    function select(id, focus) {
+      activeTab = id;
+      for (const btn of tabs.children) {
+        const on = btn.dataset.id === id;
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+        btn.tabIndex = on ? 0 : -1;
+        panels[btn.dataset.id].hidden = !on;
+        if (on && focus) btn.focus();
+      }
+    }
+
+    TAB_ORDER.forEach(([id, label]) => {
+      const tab = h("button", { type: "button", class: "tab", role: "tab", id: `tab-${id}`, "aria-controls": `panel-${id}`, "data-id": id }, label);
+      tab.addEventListener("click", () => select(id));
+      tab.addEventListener("keydown", (e) => {
+        const i = TAB_ORDER.findIndex(([t]) => t === id);
+        if (e.key === "ArrowRight") { e.preventDefault(); select(TAB_ORDER[(i + 1) % TAB_ORDER.length][0], true); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); select(TAB_ORDER[(i + TAB_ORDER.length - 1) % TAB_ORDER.length][0], true); }
+      });
+      tabs.append(tab);
+      panels[id] = h("div", { role: "tabpanel", id: `panel-${id}`, "aria-labelledby": `tab-${id}` }, builders[id](r));
+    });
+    els.results.replaceChildren(tabs, ...Object.values(panels));
+    select(activeTab);
+  }
+
+  els.copyAll.addEventListener("click", async () => {
+    if (!current) return;
+    const ok = await copyText(bundle(current));
+    toast(ok ? "Everything copied" : "Couldn't copy. Select the text and copy it manually.");
+  });
+
+  applyMode();
+  renderEmpty();
+})();
+</script>
+</body>
+</html>
